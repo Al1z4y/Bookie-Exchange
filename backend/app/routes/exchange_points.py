@@ -55,6 +55,31 @@ async def create_exchange_point(
     #         detail="Only admins can create exchange points"
     #     )
     
+    # #region agent log
+    import json
+    from pathlib import Path
+    from datetime import datetime
+    LOG_PATH = Path(__file__).parent.parent.parent / ".cursor" / "debug.log"
+    try:
+        log_entry = {
+            "sessionId": "debug-session",
+            "runId": "create-exchange-point",
+            "hypothesisId": "A",
+            "location": "exchange_points.py:59",
+            "message": "Before creating ExchangePoint",
+            "data": {
+                "user_id": current_user.id,
+                "point_name": point_data.name,
+                "has_created_by_user_id_attr": hasattr(ExchangePoint, 'created_by_user_id')
+            },
+            "timestamp": int(datetime.now().timestamp() * 1000)
+        }
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception:
+        pass
+    # #endregion
+    
     # Create exchange point
     exchange_point = ExchangePoint(
         name=point_data.name,
@@ -66,9 +91,50 @@ async def create_exchange_point(
         contact_email=point_data.contact_email,
         operating_hours=point_data.operating_hours,
         is_active=point_data.is_active,
+        created_by_user_id=current_user.id,
     )
     
+    # #region agent log
+    try:
+        log_entry = {
+            "sessionId": "debug-session",
+            "runId": "create-exchange-point",
+            "hypothesisId": "A",
+            "location": "exchange_points.py:72",
+            "message": "Before db.add()",
+            "data": {
+                "exchange_point_id": getattr(exchange_point, 'id', None),
+                "created_by_user_id": getattr(exchange_point, 'created_by_user_id', None)
+            },
+            "timestamp": int(datetime.now().timestamp() * 1000)
+        }
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception:
+        pass
+    # #endregion
+    
     db.add(exchange_point)
+    
+    # #region agent log
+    try:
+        log_entry = {
+            "sessionId": "debug-session",
+            "runId": "create-exchange-point",
+            "hypothesisId": "A",
+            "location": "exchange_points.py:88",
+            "message": "Before db.commit()",
+            "data": {
+                "exchange_point_id": getattr(exchange_point, 'id', None)
+            },
+            "timestamp": int(datetime.now().timestamp() * 1000)
+        }
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception:
+        pass
+    # #endregion
+    
     db.commit()
     db.refresh(exchange_point)
     
@@ -83,6 +149,7 @@ async def create_exchange_point(
         contact_email=exchange_point.contact_email,
         operating_hours=exchange_point.operating_hours,
         is_active=exchange_point.is_active,
+        created_by_user_id=exchange_point.created_by_user_id,
         created_at=exchange_point.created_at,
         updated_at=exchange_point.updated_at,
     )
@@ -162,6 +229,7 @@ async def list_exchange_points(
             contact_email=point.contact_email,
             operating_hours=point.operating_hours,
             is_active=point.is_active,
+            created_by_user_id=getattr(point, 'created_by_user_id', None),
             created_at=point.created_at,
             updated_at=point.updated_at,
         ))
@@ -215,6 +283,7 @@ async def get_nearby_exchange_points(
             contact_email=point.contact_email,
             operating_hours=point.operating_hours,
             is_active=point.is_active,
+            created_by_user_id=getattr(point, 'created_by_user_id', None),
             created_at=point.created_at,
             updated_at=point.updated_at,
         ))
@@ -254,6 +323,7 @@ async def get_exchange_point(
         contact_email=point.contact_email,
         operating_hours=point.operating_hours,
         is_active=point.is_active,
+        created_by_user_id=getattr(point, 'created_by_user_id', None),
         created_at=point.created_at,
         updated_at=point.updated_at,
     )
@@ -312,6 +382,7 @@ async def update_exchange_point(
         contact_email=point.contact_email,
         operating_hours=point.operating_hours,
         is_active=point.is_active,
+        created_by_user_id=getattr(point, 'created_by_user_id', None),
         created_at=point.created_at,
         updated_at=point.updated_at,
     )
@@ -375,6 +446,7 @@ async def get_exchange_points_in_bounds(
             contact_email=point.contact_email,
             operating_hours=point.operating_hours,
             is_active=point.is_active,
+            created_by_user_id=getattr(point, 'created_by_user_id', None),
             created_at=point.created_at,
             updated_at=point.updated_at,
         ))

@@ -1,11 +1,26 @@
 """
 AI-based book value calculation service.
 Calculates book value based on condition, demand, and rarity.
+Includes OpenAI integration for intelligent pricing.
 """
+import os
+import logging
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.book import Book, Wishlist
 from app.models.exchange import ExchangeRequest, ExchangeStatus
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+# Try to import OpenAI, but don't fail if not available
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.warning("OpenAI package not installed. AI pricing will use fallback method.")
 
 
 def calculate_demand_score(book_id: int, db: Session) -> float:
@@ -82,9 +97,82 @@ def calculate_condition_multiplier(condition: str) -> float:
     return condition_multipliers.get(condition.lower(), 0.6)
 
 
-def calculate_book_value(book_id: int, db: Session, base_points: int = None) -> int:
+def get_openai_pricing(title: str, author: str, condition: str) -> Optional[int]:
+    """
+    Use OpenAI to get intelligent book pricing based on title, author, and condition.
+    
+    Args:
+        title: Book title
+        author: Book author
+        condition: Book condition (excellent, good, fair, poor)
+    
+    Returns:
+        Suggested point value (5-50 range) or None if AI fails
+    """
+    # Check if OpenAI is enabled and available
+    if not settings.ENABLE_AI_PRICING or not OPENAI_AVAILABLE:
+        return None
+    
+    if not settings.OPENAI_API_KEY:
+        logger.debug("OpenAI API key not set. Using fallback pricing.")
+        return None
+    
+    try:
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        
+        # Create prompt for OpenAI
+        prompt = f"""You are a book pricing expert for a book exchange platform. 
+Evaluate this book and suggest a fair point value (5-50 points) based on:
+
+Title: {title}
+Author: {author}
+Condition: {condition}
+
+Consider:
+- Book popularity and demand
+- Author reputation and recognition
+- Book rarity and collectibility
+- Condition impact on value
+- Market trends
+
+Respond with ONLY a single integer between 5 and 50 representing the suggested point value.
+Do not include any explanation, just the number."""
+
+        response = client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a book pricing expert. Respond with only a number between 5 and 50."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=10,
+            temperature=0.3,  # Lower temperature for more consistent pricing
+        )
+        
+        # Extract the number from response
+        result_text = response.choices[0].message.content.strip()
+        
+        # Try to extract integer from response
+        import re
+        numbers = re.findall(r'\d+', result_text)
+        if numbers:
+            point_value = int(numbers[0])
+            # Clamp to valid range
+            point_value = max(5, min(50, point_value))
+            logger.info(f"OpenAI pricing for '{title}' by {author}: {point_value} points")
+            return point_value
+        else:
+            logger.warning(f"OpenAI returned non-numeric response: {result_text}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"OpenAI pricing failed: {str(e)}")
+        return None
+
+
+def calculate_book_value(book_id: int, db: Session, base_points: int = None, use_ai: bool = True) -> int:
     """
     AI-based book value calculation combining:
+    - OpenAI intelligent pricing (if available)
     - Condition (base multiplier)
     - Demand (wishlist, requests, activity)
     - Rarity (number of copies in system)
@@ -95,7 +183,8 @@ def calculate_book_value(book_id: int, db: Session, base_points: int = None) -> 
     Args:
         book_id: Book ID
         db: Database session
-        base_points: Optional base points (if None, uses condition-based default)
+        base_points: Optional base points (if None, uses condition-based default or AI)
+        use_ai: Whether to attempt OpenAI pricing (default: True)
     
     Returns:
         Calculated point value (integer)
@@ -104,15 +193,25 @@ def calculate_book_value(book_id: int, db: Session, base_points: int = None) -> 
     if not book:
         return 10  # Default value
     
+    # Try OpenAI pricing first if enabled
+    ai_base_points = None
+    if use_ai:
+        ai_base_points = get_openai_pricing(book.title, book.author, book.condition)
+    
     # Get base points if not provided
     if base_points is None:
-        base_points_map = {
-            "excellent": 15,
-            "good": 12,
-            "fair": 8,
-            "poor": 5,
-        }
-        base_points = base_points_map.get(book.condition.lower(), 10)
+        if ai_base_points is not None:
+            # Use AI-suggested base points
+            base_points = ai_base_points
+        else:
+            # Fallback to condition-based default
+            base_points_map = {
+                "excellent": 15,
+                "good": 12,
+                "fair": 8,
+                "poor": 5,
+            }
+            base_points = base_points_map.get(book.condition.lower(), 10)
     
     # Calculate components
     condition_multiplier = calculate_condition_multiplier(book.condition)
@@ -134,16 +233,24 @@ def calculate_book_value(book_id: int, db: Session, base_points: int = None) -> 
     return max(1, int(round(final_value)))
 
 
-def update_book_value(book_id: int, db: Session) -> int:
+def update_book_value(book_id: int, db: Session, use_ai: bool = True) -> int:
     """
-    Update book's point_value in database based on current demand and rarity.
+    Update book's point_value in database based on current demand, rarity, and AI pricing.
     Returns the new calculated value.
+    
+    Args:
+        book_id: Book ID
+        db: Database session
+        use_ai: Whether to use OpenAI pricing (default: True)
+    
+    Returns:
+        New calculated point value
     """
     book = db.query(Book).filter(Book.id == book_id).first()
     if not book:
         return 0
     
-    new_value = calculate_book_value(book_id, db)
+    new_value = calculate_book_value(book_id, db, use_ai=use_ai)
     book.point_value = new_value
     db.commit()
     

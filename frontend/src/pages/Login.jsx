@@ -43,7 +43,7 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-cream-500">
       {/* Left Side - Image Section */}
       <div className="hidden md:flex md:w-1/2 bg-primary-50 relative overflow-hidden items-center justify-center p-8">
         <div className="w-full h-full flex items-center justify-center">
@@ -55,14 +55,14 @@ function Login() {
               // Fallback if image doesn't exist - show gradient background with text
               e.target.style.display = 'none'
               e.target.parentElement.innerHTML = `
-                <div class="text-center text-primary">
+                <div class="text-center text-primary-600">
                   <div class="text-8xl mb-6">📚</div>
-                  <h1 class="text-4xl md:text-5xl font-bold mb-4">BOOKIE</h1>
+                  <h1 class="text-4xl md:text-5xl font-bold mb-4 text-gray-900">Bookie Exchange</h1>
                   <p class="text-xl md:text-2xl text-primary-700">
-                    Your Book Exchange App
+                    Exchange Books with Your Community
                   </p>
-                  <p class="text-lg text-primary-600 mt-4">
-                    "SHARE STORIES. DISCOVER NEW WORLDS."
+                  <p class="text-lg text-gray-600 mt-4">
+                    Share stories. Discover new worlds.
                   </p>
                 </div>
               `
@@ -72,17 +72,17 @@ function Login() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-6 md:p-12 bg-white">
+      <div className="w-full md:w-1/2 flex items-center justify-center p-6 md:p-12 bg-cream-500">
         <div className="w-full max-w-md">
           {/* Mobile Logo/Header */}
           <div className="md:hidden text-center mb-8">
             <div className="text-6xl mb-4">📚</div>
-            <h1 className="text-3xl font-bold text-primary mb-2">BooksExchange</h1>
+            <h1 className="text-3xl font-bold text-primary-600 mb-2">Bookie Exchange</h1>
             <p className="text-black/70">Swap books, share stories</p>
           </div>
 
           {/* Login Form Card */}
-          <div className="bg-white rounded-2xl shadow-xl border-2 border-primary-100 p-8 md:p-10">
+          <div className="bg-cream-50 rounded-xl shadow-lg border border-gray-200 p-8 md:p-10">
             <h2 className="text-3xl font-bold text-black mb-2">Login</h2>
             <p className="text-black/70 mb-8">Welcome back! Please login to your account.</p>
 
@@ -139,7 +139,7 @@ function Login() {
 
               {/* Forgot Password Link (Optional) */}
               <div className="flex justify-end">
-                <a href="#" className="text-sm text-primary hover:text-accent transition-colors font-medium">
+                <a href="#" className="text-sm text-primary-600 hover:text-primary-700 transition-colors font-medium">
                   Forgot password?
                 </a>
               </div>
@@ -170,7 +170,7 @@ function Login() {
                 Don't have an account?{' '}
                 <Link
                   to="/register"
-                  className="text-primary font-semibold hover:text-accent transition-colors duration-200 underline decoration-2 underline-offset-2 hover:decoration-accent"
+                  className="text-primary-600 font-semibold hover:text-primary-700 transition-colors duration-200 underline decoration-2 underline-offset-2 hover:decoration-primary-700"
                 >
                   Sign up
                 </Link>

@@ -44,6 +44,7 @@ class ExchangePointResponse(BaseModel):
     contact_email: Optional[str] = None
     operating_hours: Optional[str] = None
     is_active: bool
+    created_by_user_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

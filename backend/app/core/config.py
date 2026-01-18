@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
 
     # Database
-    # For development, you can use a default SQLite URL if .env is missing
+    # SQLite for fast local development (default)
+    # Database file will be created in the backend directory
     DATABASE_URL: str = "sqlite:///./booksexchange.db"
     DB_ECHO: bool = False
 
@@ -39,6 +40,11 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
+
+    # OpenAI API (optional - for intelligent book pricing)
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-3.5-turbo"  # Use gpt-4 for better results
+    ENABLE_AI_PRICING: bool = True  # Set to False to disable AI pricing
 
     @property
     def cors_origins_list(self) -> List[str]:

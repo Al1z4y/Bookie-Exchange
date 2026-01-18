@@ -1,16 +1,15 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { scanQRCode, addBookHistory } from '../services/api'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Html5Qrcode } from 'html5-qrcode'
+import { scanQRCodeById, addQRHistory } from '../services/api'
 
-function ScanQR() {
+function QRScanner() {
   const navigate = useNavigate()
-  const [qrInput, setQrInput] = useState('')
+  const { qrCodeId } = useParams()
+  const [scanning, setScanning] = useState(false)
+  const [bookData, setBookData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [bookData, setBookData] = useState(null)
-  const [history, setHistory] = useState([])
-  
-  // Form state for adding history
   const [showAddHistory, setShowAddHistory] = useState(false)
   const [historyForm, setHistoryForm] = useState({
     reader_name: '',
@@ -20,27 +19,82 @@ function ScanQR() {
     reading_notes: '',
     tips_for_next_reader: '',
   })
+  const scannerRef = useRef(null)
+  const html5QrCodeRef = useRef(null)
 
-  const handleScan = async (e) => {
-    e.preventDefault()
-    if (!qrInput.trim()) {
-      setError('Please enter a QR code')
-      return
+  // If qrCodeId is in URL params, load book directly
+  useEffect(() => {
+    if (qrCodeId) {
+      loadBookByQR(qrCodeId)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrCodeId])
 
+  const loadBookByQR = async (codeId) => {
     try {
       setLoading(true)
       setError(null)
-      const data = await scanQRCode(qrInput.trim())
-      setBookData(data.book)
-      setHistory(data.history || [])
+      const data = await scanQRCodeById(codeId)
+      setBookData(data)
       setShowAddHistory(true)
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to scan QR code. Please check the code and try again.')
+      setError(err.response?.data?.detail || 'Failed to load book. Please check the QR code and try again.')
       setBookData(null)
-      setHistory([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const startScanning = async () => {
+    try {
+      setScanning(true)
+      setError(null)
+      
+      const html5QrCode = new Html5Qrcode("qr-reader")
+      html5QrCodeRef.current = html5QrCode
+      
+      await html5QrCode.start(
+        { facingMode: "environment" }, // Use back camera
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        (decodedText) => {
+          // Extract QR code ID from URL if it's a full URL
+          let qrCodeId = decodedText
+          
+          // If it's a URL like /scan/{qrCodeId}, extract the ID
+          if (decodedText.includes('/scan/')) {
+            qrCodeId = decodedText.split('/scan/')[1]?.split('?')[0] || decodedText
+          }
+          
+          // Stop scanning
+          stopScanning()
+          
+          // Load book data
+          loadBookByQR(qrCodeId)
+        },
+        (errorMessage) => {
+          // Ignore scanning errors (they're frequent during scanning)
+        }
+      )
+    } catch (err) {
+      console.error('Error starting scanner:', err)
+      setError('Failed to start camera. Please check permissions and try again.')
+      setScanning(false)
+    }
+  }
+
+  const stopScanning = () => {
+    if (html5QrCodeRef.current) {
+      html5QrCodeRef.current.stop().then(() => {
+        html5QrCodeRef.current.clear()
+        html5QrCodeRef.current = null
+        setScanning(false)
+      }).catch((err) => {
+        console.error('Error stopping scanner:', err)
+        setScanning(false)
+      })
     }
   }
 
@@ -61,7 +115,7 @@ function ScanQR() {
         reading_duration_days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
       }
 
-      const newEntry = await addBookHistory(bookData.id, {
+      await addQRHistory(bookData.book.qr_code_id || qrCodeId, {
         reader_name: historyForm.reader_name,
         reading_start_date: historyForm.reading_start_date || null,
         reading_end_date: historyForm.reading_end_date || null,
@@ -72,9 +126,9 @@ function ScanQR() {
         reading_duration_days: reading_duration_days,
       })
 
-      // Refresh history
-      const data = await scanQRCode(qrInput.trim())
-      setHistory(data.history || [])
+      // Refresh book data
+      const data = await scanQRCodeById(bookData.book.qr_code_id || qrCodeId)
+      setBookData(data)
       
       // Reset form
       setHistoryForm({
@@ -94,6 +148,15 @@ function ScanQR() {
     }
   }
 
+  const handleScanAnother = () => {
+    setBookData(null)
+    setShowAddHistory(false)
+    setError(null)
+    if (html5QrCodeRef.current) {
+      stopScanning()
+    }
+  }
+
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A'
     try {
@@ -107,6 +170,15 @@ function ScanQR() {
     }
   }
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (html5QrCodeRef.current) {
+        stopScanning()
+      }
+    }
+  }, [])
+
   return (
     <div>
       <div className="mb-8">
@@ -114,84 +186,94 @@ function ScanQR() {
           Scan QR Code
         </h1>
         <p className="text-gray-600">
-          Scan or enter a book's QR code to view its complete reading history
+          Scan a book's QR code to view its reading history
         </p>
       </div>
 
-      {/* QR Code Input */}
-      <div className="card mb-8">
-        <form onSubmit={handleScan} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              QR Code / Book ID
-            </label>
-            <input
-              type="text"
-              value={qrInput}
-              onChange={(e) => setQrInput(e.target.value)}
-              placeholder="Enter QR code, UUID, or book ID..."
-              className="input-field"
-              disabled={loading}
-            />
-            <p className="mt-2 text-xs text-gray-500">
-              You can scan a QR code or paste the book's permanent ID
-            </p>
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full"
-          >
-            {loading ? 'Scanning...' : 'Scan QR Code'}
-          </button>
-        </form>
+      {!bookData && (
+        <div className="card mb-8">
+          {!scanning ? (
+            <div className="text-center space-y-4">
+              <div className="text-6xl mb-4">📷</div>
+              <p className="text-gray-700">Click the button below to start scanning</p>
+              <button
+                onClick={startScanning}
+                className="btn-primary"
+              >
+                Start Camera Scanner
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div id="qr-reader" className="w-full"></div>
+              <button
+                onClick={stopScanning}
+                className="w-full btn-secondary"
+              >
+                Stop Scanning
+              </button>
+            </div>
+          )}
 
-        {error && (
-          <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-      </div>
+          {error && (
+            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Book Details and History */}
+      {loading && !bookData && (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        </div>
+      )}
+
       {bookData && (
         <div className="space-y-6">
           {/* Book Information */}
           <div className="card">
-            <h2 className="text-2xl font-semibold text-black mb-4">Book Information</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold text-black">Book Information</h2>
+              <button
+                onClick={handleScanAnother}
+                className="btn-secondary text-sm"
+              >
+                Scan Another
+              </button>
+            </div>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-xl font-semibold text-black mb-2">{bookData.title}</h3>
-                <p className="text-gray-600 mb-4">by {bookData.author}</p>
+                <h3 className="text-xl font-semibold text-black mb-2">{bookData.book.title}</h3>
+                <p className="text-gray-600 mb-4">by {bookData.book.author}</p>
                 <div className="space-y-2">
                   <div>
                     <span className="text-sm font-medium text-gray-700">Condition:</span>
                     <span className="ml-2 px-3 py-1 bg-primary-100 text-primary-600 rounded-lg text-sm font-medium">
-                      {bookData.condition}
+                      {bookData.book.condition}
                     </span>
                   </div>
                   <div>
                     <span className="text-sm font-medium text-gray-700">Points Value:</span>
-                    <span className="ml-2 text-primary-600 font-bold">{bookData.point_value} pts</span>
+                    <span className="ml-2 text-primary-600 font-bold">{bookData.book.point_value} pts</span>
                   </div>
-                  {bookData.location && (
+                  {bookData.book.location && (
                     <div>
                       <span className="text-sm font-medium text-gray-700">Location:</span>
-                      <span className="ml-2 text-gray-600">{bookData.location}</span>
+                      <span className="ml-2 text-gray-600">{bookData.book.location}</span>
                     </div>
                   )}
                   <div>
                     <span className="text-sm font-medium text-gray-700">Current Owner:</span>
-                    <span className="ml-2 text-gray-600">{bookData.owner_username}</span>
+                    <span className="ml-2 text-gray-600">{bookData.book.owner_username}</span>
                   </div>
                 </div>
               </div>
-              {bookData.image_urls && bookData.image_urls.length > 0 && (
+              {bookData.book.image_urls && bookData.book.image_urls.length > 0 && (
                 <div>
                   <img
-                    src={bookData.image_urls[0]}
-                    alt={bookData.title}
+                    src={bookData.book.image_urls[0]}
+                    alt={bookData.book.title}
                     className="w-full max-w-xs rounded-lg border border-gray-200 shadow-sm"
                   />
                 </div>
@@ -203,14 +285,14 @@ function ScanQR() {
           <div className="card">
             <h2 className="text-2xl font-semibold text-black mb-4">Reading History Timeline</h2>
             
-            {history.length > 0 ? (
+            {bookData.history && bookData.history.length > 0 ? (
               <div className="space-y-4">
-                {history.map((entry, index) => (
+                {bookData.history.map((entry, index) => (
                   <div
-                    key={entry.id}
+                    key={entry.id || index}
                     className="border-l-4 border-primary-500 pl-4 pb-4 relative"
                   >
-                    {index < history.length - 1 && (
+                    {index < bookData.history.length - 1 && (
                       <div className="absolute left-[-2px] top-8 bottom-0 w-0.5 bg-gray-200"></div>
                     )}
                     <div className="bg-gray-50 rounded-lg p-4">
@@ -381,4 +463,4 @@ function ScanQR() {
   )
 }
 
-export default ScanQR
+export default QRScanner

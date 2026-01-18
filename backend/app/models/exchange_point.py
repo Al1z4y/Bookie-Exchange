@@ -2,7 +2,7 @@
 Physical exchange point/location models.
 """
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Float
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -22,8 +22,12 @@ class ExchangePoint(Base):
     contact_email = Column(String(255), nullable=True)
     operating_hours = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Nullable for migration compatibility
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    created_by = relationship("User", foreign_keys=[created_by_user_id])
 
     def __repr__(self):
         return f"<ExchangePoint(id={self.id}, name={self.name})>"

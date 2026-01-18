@@ -1,6 +1,6 @@
-# BooksExchange Frontend
+# BOOKIE Frontend
 
-React frontend application for the BooksExchange book swapping platform.
+React frontend application for the BOOKIE book exchange platform. Modern, responsive UI built with React, Tailwind CSS, and Vite.
 
 ## Tech Stack
 
@@ -62,12 +62,31 @@ frontend/
 
 ## Features
 
-- User authentication (Login/Register)
-- Book browsing and search
-- Book detail pages
-- Exchange request management
-- User profile
-- Responsive design with Tailwind CSS
+### Pages
+- **Home**: Browse and search books with advanced filters
+- **My Books**: Manage your listed books
+- **Wishlist**: View wishlist with availability alerts
+- **Requests**: Manage exchange requests (sent and received)
+- **Scan QR Code**: Scan book QR codes to view history and add entries
+- **Forums**: Community discussions with voting and anonymous posting
+- **Messages**: In-app messaging with user search
+- **Profile Settings**: Manage your profile
+- **Buy Points**: Purchase points with real money
+
+### Components
+- **BookCard**: Reusable book card component
+- **Navbar**: Top navigation bar
+- **PlusIconDropdown**: Quick actions menu
+- **Footer**: Site footer
+
+### Key Features
+- **Responsive Design**: Works on all device sizes
+- **Real-time Updates**: Auto-refresh for messages and requests
+- **Search & Filter**: Advanced book search with multiple filters
+- **QR Code Scanning**: View and add book reading history
+- **User Search**: Find and message other users
+- **Wishlist Alerts**: Notifications when wishlist books become available
+- **Modern UI**: Green-themed, clean interface
 
 ## API Integration
 

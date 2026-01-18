@@ -104,6 +104,7 @@ async def create_exchange_request(
     history_entry = BookHistory(
         book_id=book.id,
         user_id=current_user.id,
+        reader_name=current_user.username,  # Store name to survive account deletion
         action="exchange_requested",
         notes=f"Exchange request created by {current_user.username}",
     )
@@ -220,6 +221,7 @@ async def approve_exchange(
         history_entry1 = BookHistory(
             book_id=book.id,  # Book ID persists, only owner_id changes
             user_id=exchange.requester_id,
+            reader_name=requester.username if requester else "Unknown",  # Store name to survive account deletion
             action="ownership_transferred",
             notes=f"Book ownership transferred from {old_owner.username if old_owner else 'unknown'} to {requester.username if requester else 'unknown'} upon exchange approval.",
         )

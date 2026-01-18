@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchBook, createExchangeRequest, addToWishlist, removeFromWishlist, fetchWishlist } from '../services/api'
+import { fetchBook, createExchangeRequest, addToWishlist, removeFromWishlist, fetchWishlist, recalculateBookValue } from '../services/api'
+import QRCodeDisplay from '../components/QRCodeDisplay'
+import InsufficientPointsModal from '../components/InsufficientPointsModal'
 
 function BookDetail() {
   const { id } = useParams()
@@ -14,6 +16,9 @@ function BookDetail() {
   const [successMessage, setSuccessMessage] = useState(null)
   const [showExchangeModal, setShowExchangeModal] = useState(false)
   const [exchangeMessage, setExchangeMessage] = useState('')
+  const [showInsufficientPointsModal, setShowInsufficientPointsModal] = useState(false)
+  const [pointsNeeded, setPointsNeeded] = useState(0)
+  const [recalculating, setRecalculating] = useState(false)
 
   useEffect(() => {
     const loadBook = async () => {
@@ -107,12 +112,61 @@ function BookDetail() {
       setTimeout(() => setSuccessMessage(null), 3000)
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to send exchange request. Please try again.'
-      setError(errorMsg)
+      
+      // Check if error is about insufficient points
+      if (errorMsg.includes('Insufficient points') || errorMsg.includes('need') && errorMsg.includes('points')) {
+        // Extract points needed from error message
+        const match = errorMsg.match(/need (\d+) points/)
+        const needed = match ? parseInt(match[1]) : book.point_value
+        const current = user.points_balance || 0
+        
+        setPointsNeeded(needed)
+        setShowInsufficientPointsModal(true)
+        setShowExchangeModal(false)
+      } else {
+        setError(errorMsg)
+      }
       console.error('Error creating exchange request:', err)
     } finally {
       setExchangeLoading(false)
     }
   }
+
+  const handlePurchaseSuccess = async (pointsAdded) => {
+    // Refresh user data
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    user.points_balance = (user.points_balance || 0) + pointsAdded
+    localStorage.setItem('user', JSON.stringify(user))
+    
+    setSuccessMessage(`Successfully purchased ${pointsAdded} points! You can now proceed with the exchange.`)
+    setShowInsufficientPointsModal(false)
+    
+    // Optionally retry the exchange automatically
+    // Or let user click the exchange button again
+  }
+
+  const handleRecalculateValue = async () => {
+    if (!book) return
+    
+    try {
+      setRecalculating(true)
+      setError(null)
+      setSuccessMessage(null)
+      
+      const updatedBook = await recalculateBookValue(book.id, true)
+      setBook(updatedBook)
+      setSuccessMessage(`Book value recalculated! New value: ${updatedBook.point_value} points`)
+      
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || 'Failed to recalculate value. Please try again.'
+      setError(errorMsg)
+      console.error('Error recalculating value:', err)
+    } finally {
+      setRecalculating(false)
+    }
+  }
+
 
   if (loading) {
     return (
@@ -144,6 +198,9 @@ function BookDetail() {
     fair: 'bg-yellow-100 text-yellow-800',
     poor: 'bg-red-100 text-red-800',
   }
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const isOwnBook = user.id === book?.owner_id
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -217,6 +274,13 @@ function BookDetail() {
               <span className="text-gray-600">Listed by: </span>
               <span className="font-medium">{book.owner_username || 'Unknown'}</span>
             </div>
+
+            {/* QR Code Section - Only show for book owner */}
+            {isOwnBook && (
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <QRCodeDisplay book={book} />
+              </div>
+            )}
           </div>
 
           {/* Success/Error Messages */}
@@ -232,34 +296,38 @@ function BookDetail() {
           )}
 
           <div className="space-y-3">
-            {(() => {
-              const user = JSON.parse(localStorage.getItem('user') || '{}')
-              const isOwnBook = user.id === book.owner_id
-              
-              if (isOwnBook) {
-                return (
-                  <button className="w-full btn-secondary" disabled>
-                    This is your book
-                  </button>
-                )
-              } else if (book.is_available) {
-                return (
-                  <button 
-                    onClick={() => setShowExchangeModal(true)}
-                    disabled={exchangeLoading}
-                    className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {exchangeLoading ? 'Processing...' : 'Request Exchange'}
-                  </button>
-                )
-              } else {
-                return (
-                  <button className="w-full btn-secondary" disabled>
-                    Currently Unavailable
-                  </button>
-                )
-              }
-            })()}
+            {isOwnBook ? (
+              <div className="space-y-2">
+                <button className="w-full btn-secondary" disabled>
+                  This is your book
+                </button>
+                <button
+                  onClick={handleRecalculateValue}
+                  disabled={recalculating}
+                  className="w-full btn-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {recalculating ? 'Recalculating...' : 'Recalculate Value (AI)'}
+                </button>
+                <button
+                  onClick={() => navigate('/home/scan-qr')}
+                  className="w-full btn-secondary"
+                >
+                  View Book History
+                </button>
+              </div>
+            ) : book.is_available ? (
+              <button 
+                onClick={() => setShowExchangeModal(true)}
+                disabled={exchangeLoading}
+                className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exchangeLoading ? 'Processing...' : 'Request Exchange'}
+              </button>
+            ) : (
+              <button className="w-full btn-secondary" disabled>
+                Currently Unavailable
+              </button>
+            )}
             <button 
               onClick={handleAddToWishlist}
               disabled={wishlistLoading}
@@ -276,10 +344,21 @@ function BookDetail() {
             </button>
           </div>
 
+          {/* Insufficient Points Modal */}
+          {showInsufficientPointsModal && (
+            <InsufficientPointsModal
+              isOpen={showInsufficientPointsModal}
+              onClose={() => setShowInsufficientPointsModal(false)}
+              pointsNeeded={pointsNeeded}
+              currentPoints={JSON.parse(localStorage.getItem('user') || '{}').points_balance || 0}
+              onPurchaseSuccess={handlePurchaseSuccess}
+            />
+          )}
+
           {/* Exchange Request Modal */}
           {showExchangeModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="bg-cream-50 rounded-lg p-6 max-w-md w-full mx-4">
                 <h2 className="text-2xl font-bold mb-4">Request Exchange</h2>
                 <p className="text-gray-600 mb-4">
                   You are requesting to exchange <strong>{book.point_value} points</strong> for this book.

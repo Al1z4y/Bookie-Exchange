@@ -21,10 +21,13 @@ router = APIRouter(prefix="/payment", tags=["payment"])
 
 # Point pricing (points per USD)
 POINT_PRICING = {
-    100: 5.00,   # 20 points per USD
-    250: 10.00,  # 25 points per USD
-    500: 18.00,  # ~27.8 points per USD
-    1000: 30.00, # ~33.3 points per USD
+    10: 2.99,    # 10 points for $2.99
+    25: 6.99,    # 25 points for $6.99
+    50: 12.99,   # 50 points for $12.99
+    100: 5.00,   # 20 points per USD (legacy)
+    250: 10.00,  # 25 points per USD (legacy)
+    500: 18.00,  # ~27.8 points per USD (legacy)
+    1000: 30.00, # ~33.3 points per USD (legacy)
 }
 
 

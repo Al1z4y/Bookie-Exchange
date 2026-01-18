@@ -1,7 +1,7 @@
 """
 Pydantic schemas for book management.
 """
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel
 from enum import Enum
@@ -41,6 +41,7 @@ class BookResponse(BaseModel):
     """Book response schema."""
     id: int
     permanent_id: Optional[str] = None  # Permanent UUID that persists across ownership transfers (nullable for migration)
+    qr_code_id: Optional[str] = None  # Short QR code ID format: book_{12_char_hex}
     title: str
     author: str
     condition: BookCondition
@@ -86,9 +87,15 @@ class BookHistoryEntry(BaseModel):
     """Book history entry schema."""
     id: int
     action: str
-    notes: Optional[str] = None
-    city: Optional[str] = None
-    reading_duration_days: Optional[int] = None
+    reader_name: Optional[str] = None  # Reader name (preserved even if user deleted)
+    reading_start_date: Optional[date] = None
+    reading_end_date: Optional[date] = None
+    cities_read: Optional[str] = None  # Cities where book was read
+    reading_notes: Optional[str] = None  # General reading notes
+    tips_for_next_reader: Optional[str] = None  # Tips for next readers
+    notes: Optional[str] = None  # Legacy field for backward compatibility
+    city: Optional[str] = None  # Legacy field for backward compatibility
+    reading_duration_days: Optional[int] = None  # Legacy field
     user_id: Optional[int] = None
     username: Optional[str] = None  # Can be None if user deleted
     created_at: datetime
@@ -99,14 +106,21 @@ class BookHistoryEntry(BaseModel):
 
 class BookHistoryCreate(BaseModel):
     """Create book history entry schema."""
+    reader_name: Optional[str] = None  # Reader name (optional, can use current user's name)
+    reading_start_date: Optional[date] = None
+    reading_end_date: Optional[date] = None
+    cities_read: Optional[str] = None  # Comma-separated cities
+    reading_notes: Optional[str] = None
+    tips_for_next_reader: Optional[str] = None
+    action: str = "read"  # Default action is "read"
+    # Legacy fields for backward compatibility
     notes: Optional[str] = None
     city: Optional[str] = None
     reading_duration_days: Optional[int] = None
-    action: str = "read"  # Default action is "read"
 
 
 class QRCodeScanResponse(BaseModel):
     """QR code scan response schema."""
     book: BookResponse
-    history: List[BookHistoryEntry]  # Book history entries
+    history: List[BookHistoryEntry]  # Book history entries (complete reading timeline)
     current_holder: Optional[dict] = None  # Current book holder info

@@ -11,22 +11,26 @@ from app.core.config import settings
 is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
 # Create database engine
-# Neon PostgreSQL connection strings typically include sslmode=require in the URL
-# SQLite doesn't support connection pooling, so adjust settings accordingly
+# SQLite for fast local development (default)
+# PostgreSQL can be used by changing DATABASE_URL in .env
 if is_sqlite:
+    # SQLite configuration - optimized for local development
+    # Database file will be created in the backend directory
     engine = create_engine(
         settings.DATABASE_URL,
         echo=settings.DB_ECHO,
         connect_args={"check_same_thread": False},  # Required for SQLite with FastAPI
+        pool_pre_ping=True,  # Verify connections before using
     )
 else:
-    # PostgreSQL (Neon) configuration with optimized pool settings
+    # PostgreSQL (Neon) configuration - for production deployment
+    # Requires psycopg2-binary in requirements.txt
     engine = create_engine(
         settings.DATABASE_URL,
         echo=settings.DB_ECHO,
         pool_pre_ping=True,
-        pool_size=20,  # Increased from 10
-        max_overflow=40,  # Increased from 20
+        pool_size=20,
+        max_overflow=40,
         pool_recycle=3600,  # Recycle connections after 1 hour
         connect_args={
             "connect_timeout": 10,

@@ -1,8 +1,8 @@
 """
 Book model for book listings and management.
 """
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, JSON
+from datetime import datetime, date
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, JSON, Date
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -14,6 +14,7 @@ class Book(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     permanent_id = Column(String(36), unique=True, index=True, nullable=True)  # UUID - permanent digital identity (nullable for migration)
+    qr_code_id = Column(String(50), unique=True, index=True, nullable=True)  # Short QR code ID format: book_{uuid_hex[:12]}
     title = Column(String(255), nullable=False, index=True)
     author = Column(String(255), nullable=False, index=True)
     condition = Column(String(20), nullable=False)  # excellent, good, fair, poor
@@ -30,7 +31,7 @@ class Book(Base):
     # Relationships
     owner = relationship("User", back_populates="books", foreign_keys=[owner_id])
     exchange_requests = relationship("ExchangeRequest", back_populates="book")
-    book_history = relationship("BookHistory", back_populates="book")
+    book_history = relationship("BookHistory", back_populates="book", cascade="all, delete-orphan")
     wishlist_items = relationship("Wishlist", back_populates="book")
 
     def __repr__(self):
@@ -44,10 +45,16 @@ class BookHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     book_id = Column(Integer, ForeignKey("books.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # Nullable to preserve history if user deleted
-    action = Column(String(50), nullable=False)  # created, exchanged, scanned, read, etc.
-    notes = Column(Text, nullable=True)  # Tips and notes from readers
-    city = Column(String(255), nullable=True)  # City where book was read
-    reading_duration_days = Column(Integer, nullable=True)  # How long the book was read (in days)
+    reader_name = Column(String(100), nullable=True)  # Store name to survive account deletion
+    action = Column(String(50), nullable=False, default="read")  # created, exchanged, scanned, read, etc.
+    reading_start_date = Column(Date, nullable=True)  # When reading started
+    reading_end_date = Column(Date, nullable=True)  # When reading ended
+    cities_read = Column(String(500), nullable=True)  # "New York, Paris, Tokyo" - cities where book was read
+    reading_notes = Column(Text, nullable=True)  # General reading notes
+    tips_for_next_reader = Column(Text, nullable=True)  # Tips and notes specifically for next readers
+    notes = Column(Text, nullable=True)  # Legacy field for backward compatibility
+    city = Column(String(255), nullable=True)  # Legacy field for backward compatibility
+    reading_duration_days = Column(Integer, nullable=True)  # How long the book was read (in days) - legacy field
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

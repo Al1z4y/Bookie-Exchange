@@ -1,31 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-white text-black;
+    @apply bg-cream-500 text-black font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-black;
+    font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+  }
+  
+  h1 {
+    @apply font-semibold;
+  }
+  
+  h2 {
+    @apply font-semibold;
+  }
+  
+  h3 {
+    @apply font-semibold;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary-600 transition-all duration-200 font-medium shadow-sm hover:shadow-md;
+    @apply bg-primary-500 text-white px-6 py-3 rounded-lg hover:bg-primary-600 transition-all duration-200 font-medium shadow-sm hover:shadow-md;
   }
   
   .btn-secondary {
-    @apply bg-secondary-200 text-primary-800 px-6 py-3 rounded-lg hover:bg-secondary-300 transition-all duration-200 font-medium;
+    @apply bg-cream-500 text-primary-500 border-2 border-primary-300 px-6 py-3 rounded-lg hover:bg-primary-50 hover:border-primary-400 transition-all duration-200 font-medium;
   }
   
   .btn-accent {
-    @apply bg-accent text-white px-6 py-3 rounded-lg hover:bg-accent-500 transition-all duration-200 font-medium shadow-sm hover:shadow-md;
+    @apply bg-accent-500 text-white px-6 py-3 rounded-lg hover:bg-accent-600 transition-all duration-200 font-medium shadow-sm hover:shadow-md;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium;
   }
   
   .input-field {
-    @apply w-full px-4 py-3 border-2 border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-white text-black transition-all duration-200;
+    @apply w-full px-4 py-3 bg-cream-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-black placeholder-gray-400 transition-all duration-200;
   }
   
   .card {
-    @apply bg-white rounded-xl shadow-lg p-6 border border-primary-100;
+    @apply bg-cream-50 rounded-xl shadow-sm p-6 border border-gray-200;
+  }
+  
+  .card-hover {
+    @apply card hover:shadow-lg hover:border-primary-300 transition-all duration-300;
+  }
+  
+  .icon-button {
+    @apply p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200;
   }
 }

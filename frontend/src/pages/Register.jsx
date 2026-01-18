@@ -43,7 +43,7 @@ function Register() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-white">
+    <div className="min-h-screen flex flex-col md:flex-row bg-cream-500">
       {/* Left Side - Image Section */}
       <div className="hidden md:flex md:w-1/2 bg-primary-50 relative overflow-hidden items-center justify-center p-8">
         <div className="w-full h-full flex items-center justify-center">
@@ -72,7 +72,7 @@ function Register() {
       </div>
 
       {/* Right Side - Register Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center bg-white py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full md:w-1/2 flex items-center justify-center bg-cream-500 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="text-center mb-6">
@@ -83,7 +83,7 @@ function Register() {
           </div>
           <p className="mt-2 text-center text-sm text-black/70">
             Or{' '}
-            <Link to="/login" className="font-medium text-primary hover:text-accent transition-colors">
+            <Link to="/login" className="font-medium text-primary-600 hover:text-primary-700 transition-colors">
               sign in to your existing account
             </Link>
           </p>
@@ -101,7 +101,7 @@ function Register() {
           </div>
         )}
 
-        <form className="mt-8 space-y-6 bg-white rounded-2xl shadow-xl border-2 border-primary-100 p-8" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6 bg-cream-50 rounded-xl shadow-lg border border-gray-200 p-8" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-black mb-1">

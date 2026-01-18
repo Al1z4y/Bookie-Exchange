@@ -1,9 +1,11 @@
 """
 Database initialization script.
-Run this script to create all tables in your Neon PostgreSQL database.
+Run this script to create all tables in your database.
 
 Usage:
-    python init_db.py
+    python init_db.py          # Create tables
+    python init_db.py drop     # Drop all tables
+    python reset_db.py         # Reset database (drop + recreate)
 """
 import sys
 from pathlib import Path
@@ -11,58 +13,20 @@ from pathlib import Path
 # Add the backend directory to the path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.core.database import Base, engine
-from app.models import (
-    User, Book, BookHistory, Wishlist,
-    ExchangeRequest, ExchangeDispute,
-    PaymentTransaction,
-    PointTransaction,
-    ForumPost, ForumReply, ForumVote,
-    Message,
-    ExchangePoint,
-)
-
-
-def init_db():
-    """Create all database tables."""
-    print("=" * 60)
-    print("Initializing BooksExchange Database")
-    print("=" * 60)
-    print(f"Database URL: {engine.url}")
-    print("\nCreating tables...")
-    
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("\n✅ Database tables created successfully!")
-        print("\nCreated tables:")
-        for table_name in Base.metadata.tables.keys():
-            print(f"  - {table_name}")
-        print("\nYou can now view these tables in your Neon console!")
-    except Exception as e:
-        print(f"\n❌ Error creating tables: {e}")
-        sys.exit(1)
-
-
-def drop_db():
-    """Drop all database tables (use with caution!)."""
-    print("=" * 60)
-    print("⚠️  WARNING: This will drop ALL tables!")
-    print("=" * 60)
-    response = input("Are you sure you want to continue? (yes/no): ")
-    if response.lower() != "yes":
-        print("Cancelled.")
-        return
-    
-    try:
-        Base.metadata.drop_all(bind=engine)
-        print("\n✅ All database tables dropped!")
-    except Exception as e:
-        print(f"\n❌ Error dropping tables: {e}")
-        sys.exit(1)
-
+from app.core.db_init import init_db, drop_db, reset_database
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "drop":
-        drop_db()
+    if len(sys.argv) > 1:
+        command = sys.argv[1].lower()
+        if command == "drop":
+            drop_db()
+        elif command == "reset":
+            reset_database()
+        else:
+            print(f"Unknown command: {command}")
+            print("Usage: python init_db.py [drop|reset]")
+            print("  (no args) - Create tables if they don't exist")
+            print("  drop      - Drop all tables")
+            print("  reset     - Drop and recreate all tables (fresh start)")
     else:
         init_db()

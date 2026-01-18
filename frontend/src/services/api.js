@@ -123,7 +123,24 @@ export const fetchMyBooks = async () => {
 }
 
 export const scanQRCode = async (qrCode) => {
-  const response = await api.get(`/books/qr/${qrCode}`)
+  // Try new QR endpoint first, fallback to old one
+  try {
+    const response = await api.get(`/qr/${encodeURIComponent(qrCode)}`)
+    return response.data
+  } catch (err) {
+    // Fallback to old endpoint for backward compatibility
+    const response = await api.get(`/books/qr/${encodeURIComponent(qrCode)}`)
+    return response.data
+  }
+}
+
+export const scanQRCodeById = async (qrCodeId) => {
+  const response = await api.get(`/qr/${encodeURIComponent(qrCodeId)}`)
+  return response.data
+}
+
+export const addQRHistory = async (qrCodeId, historyData) => {
+  const response = await api.post(`/qr/${encodeURIComponent(qrCodeId)}/add-history`, historyData)
   return response.data
 }
 
@@ -144,6 +161,11 @@ export const removeFromWishlist = async (bookId) => {
 
 export const fetchWishlist = async () => {
   const response = await api.get('/books/wishlist/my-list')
+  return response.data
+}
+
+export const recalculateBookValue = async (bookId, useAi = true) => {
+  const response = await api.post(`/books/${bookId}/recalculate-value?use_ai=${useAi}`)
   return response.data
 }
 
@@ -326,6 +348,11 @@ export const fetchNearbyExchangePoints = async (latitude, longitude, radius = 10
   const response = await api.get('/exchange-points/nearby', {
     params: { latitude, longitude, radius_km: radius },
   })
+  return response.data
+}
+
+export const createExchangePoint = async (pointData) => {
+  const response = await api.post('/exchange-points', pointData)
   return response.data
 }
 
