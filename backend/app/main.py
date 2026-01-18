@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 
+
 # Initialize FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
@@ -48,6 +49,7 @@ async def startup_event():
     try:
         from app.core.database import Base, engine
         from app.core.config import settings
+
         from app.core.db_init import init_db
         
         # Import all models to ensure they're registered with Base
